@@ -16,6 +16,8 @@ public interface IBackendStore
     Task<bool> HasRoleUsersAsync(Guid roleId, CancellationToken ct);
     Task<StoredFile?> FileAsync(Guid id, CancellationToken ct);
     Task<bool> IsFileReferencedAsync(string objectKey, CancellationToken ct);
+    Task<RefreshToken?> RefreshTokenAsync(string tokenHash, CancellationToken ct);
+    Task RevokeRefreshFamilyAsync(Guid familyId, DateTimeOffset revokedAt, CancellationToken ct);
     void AddUser(User user);
     void AddRole(Role role);
     void AddPermission(Permission permission);
@@ -23,6 +25,7 @@ public interface IBackendStore
     void RemovePermission(Permission permission);
     void AddFile(StoredFile file);
     void AddAudit(ActivityLog log);
+    void AddRefreshToken(RefreshToken token);
     Task BeginAsync(CancellationToken ct);
     Task CommitAsync(CancellationToken ct);
     Task RollbackAsync(CancellationToken ct);

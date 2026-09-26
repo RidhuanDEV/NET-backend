@@ -59,7 +59,7 @@ public sealed class RuntimeTests
         db.Roles.AddRange(adminRole, userRole); db.Users.Add(admin); await db.SaveChangesAsync(); adminId = admin.Id; userRoleId = userRole.Id;
         host = new TestHost(new Dictionary<string, string?> { ["Database:ConnectionString"] = connectionString, ["Upload:LocalRoot"] = uploadRoot }); client = host.CreateClient();
         var login = await Send(HttpMethod.Post, "/api/auth/login", new { email = admin.Email, password = "fixture-password" }, HttpStatusCode.OK);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", login.GetProperty("data").GetProperty("token").GetString());
+        client.DefaultRequestHeaders.Authorization = new("Bearer", login.GetProperty("data").GetProperty("accessToken").GetString());
     }
     [TestCleanup]
     public async Task Cleanup()
@@ -85,7 +85,7 @@ public sealed class RuntimeTests
     {
         foreach (var path in new[] { "/health", "/live", "/ready", "/api/auth/me", "/api/users", "/api/roles", "/api/permissions" }) await Get(path);
         var registration = await Send(HttpMethod.Post, "/api/auth/register", new { email = "new@example.test", password = "fixture-password" }, HttpStatusCode.Created);
-        Assert.IsTrue(registration.GetProperty("data").TryGetProperty("deletedAt", out var deleted)); Assert.AreEqual(JsonValueKind.Null, deleted.ValueKind);
+        Assert.IsFalse(registration.GetProperty("data").TryGetProperty("deletedAt", out _));
         var user = await Send(HttpMethod.Post, "/api/users", new { email = "crud@example.test", password = "fixture-password", roleId = userRoleId }, HttpStatusCode.Created); var userId = user.GetProperty("data").GetProperty("id").GetGuid();
         await Get("/api/users/" + userId); await Send(HttpMethod.Patch, "/api/users/" + userId, new { email = "updated@example.test" }, HttpStatusCode.OK);
         var page = await Get("/api/users?page=1&limit=1&search=updated&sortBy=email&orderBy=desc"); Assert.AreEqual(1, page.GetProperty("meta").GetProperty("totalItems").GetInt32());
@@ -103,7 +103,7 @@ public sealed class RuntimeTests
         foreach (var audit in audits) { Assert.IsFalse((audit.Before + audit.After).Contains("fixture-password", StringComparison.Ordinal)); Assert.IsFalse((audit.Before + audit.After).Contains("PasswordHash", StringComparison.OrdinalIgnoreCase)); Assert.AreEqual(TimeSpan.Zero, audit.CreatedAt.Offset); }
         Assert.IsFalse(db.Database.HasPendingModelChanges()); Assert.IsNotNull(await db.Users.IgnoreQueryFilters().Where(u => u.Id == userId).Select(u => u.DeletedAt).SingleAsync());
         await Send(HttpMethod.Post, "/api/auth/login", new { email = "updated@example.test", password = "fixture-password" }, HttpStatusCode.Unauthorized);
-        var token = await Send(HttpMethod.Post, "/api/auth/login", new { email = "new@example.test", password = "fixture-password" }, HttpStatusCode.OK); using var ordinary = host.CreateClient(); ordinary.DefaultRequestHeaders.Authorization = new("Bearer", token.GetProperty("data").GetProperty("token").GetString()); using var forbidden = await ordinary.GetAsync("/api/users"); Assert.AreEqual(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        var token = await Send(HttpMethod.Post, "/api/auth/login", new { email = "new@example.test", password = "fixture-password" }, HttpStatusCode.OK); using var ordinary = host.CreateClient(); ordinary.DefaultRequestHeaders.Authorization = new("Bearer", token.GetProperty("data").GetProperty("accessToken").GetString()); using var forbidden = await ordinary.GetAsync("/api/users"); Assert.AreEqual(HttpStatusCode.Forbidden, forbidden.StatusCode);
         await Send(HttpMethod.Delete, "/api/users/" + adminId, new { }, HttpStatusCode.Forbidden);
     }
     [TestMethod]

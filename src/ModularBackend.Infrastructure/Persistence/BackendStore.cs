@@ -32,6 +32,8 @@ public sealed class BackendStore(BackendDbContext db) : IBackendStore
     public Task<bool> HasRoleUsersAsync(Guid roleId, CancellationToken ct) => db.Users.IgnoreQueryFilters().AnyAsync(x => x.RoleId == roleId, ct);
     public Task<StoredFile?> FileAsync(Guid id, CancellationToken ct) => db.StoredFiles.SingleOrDefaultAsync(x => x.Id == id, ct);
     public Task<bool> IsFileReferencedAsync(string objectKey, CancellationToken ct) => db.StoredFiles.AnyAsync(f => f.ObjectKey == objectKey, ct);
+    public Task<RefreshToken?> RefreshTokenAsync(string tokenHash, CancellationToken ct) => db.RefreshTokens.SingleOrDefaultAsync(x => x.TokenHash == tokenHash, ct);
+    public async Task RevokeRefreshFamilyAsync(Guid familyId, DateTimeOffset revokedAt, CancellationToken ct) => _ = await db.RefreshTokens.Where(x => x.FamilyId == familyId && x.RevokedAt == null).ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, revokedAt), ct);
     public void AddUser(User user) => db.Users.Add(user);
     public void AddRole(Role role) => db.Roles.Add(role);
     public void AddPermission(Permission permission) => db.Permissions.Add(permission);
@@ -39,6 +41,7 @@ public sealed class BackendStore(BackendDbContext db) : IBackendStore
     public void RemovePermission(Permission permission) => db.Permissions.Remove(permission);
     public void AddFile(StoredFile file) => db.StoredFiles.Add(file);
     public void AddAudit(ActivityLog log) => db.ActivityLogs.Add(log);
+    public void AddRefreshToken(RefreshToken token) => db.RefreshTokens.Add(token);
     public async Task BeginAsync(CancellationToken ct) => transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
     public async Task CommitAsync(CancellationToken ct)
     {

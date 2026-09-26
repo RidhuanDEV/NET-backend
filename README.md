@@ -149,11 +149,11 @@ Integration tests require PostgreSQL and create a temporary database that the te
 
 ## Security and known limits
 
-- Access tokens expire after 24 hours. There is no refresh token or token revocation endpoint; account status and current permissions are still checked against the database. Change the configured token lifetime in `TokenService` if your application's risk policy requires shorter sessions.
+- Access tokens expire after 15 minutes. `POST /api/auth/login` and `POST /api/auth/refresh` return a rotating refresh token; send `{ "refreshToken": "..." }` to refresh. Treat refresh tokens as credentials and store them securely. The server stores only their hashes, each token lives up to 30 days, and its family expires after 90 days. Reuse revokes the active family. Auth user responses contain only `id`, `email`, and `roleId`.
 - Uploads and file metadata are protected by `manage_users` in the starter registry. This follows the source contract but couples file access to user administration; replace it with a dedicated permission when adapting the template.
 - `GET /api/upload/{id}` returns protected file metadata, not file bytes. There is no download endpoint or presigned URL flow in this starter.
-- [MinIO's community repository](https://github.com/minio/minio) was archived on April 25, 2026. The pinned optional Compose image remains a development fixture; use a maintained S3-compatible service for ongoing production use.
-- Configure TLS termination, explicit CORS origins, trusted proxy addresses, secrets storage, backups, retention, and telemetry for your deployment. Redis memory mode limits each API instance separately.
+- The optional S3 Compose profile and CI use [Adobe S3Mock](https://github.com/adobe/S3Mock), a test fixture that implements a subset of S3 and is not for production. Use a managed or maintained S3-compatible service for deployment.
+- Configure TLS termination, explicit CORS origins, trusted proxy addresses, secrets storage, backups, retention, and telemetry for your deployment. For multiple API instances, set `Rate__Store=redis` and `Rate__InstanceCount` to the replica count, then provide a reachable Redis connection. Startup validation rejects a declared multi-instance memory limiter.
 
 Forwarded headers are ignored unless trusted proxy IPs are configured. Credentialed CORS is disabled. Upload object keys use random UUIDs and allowed file signatures are checked. See [Operations](docs/OPERATIONS.md) and [reference contract differences](docs/CONTRACTS.md) for policy, audit/cache behavior, storage setup, and compatibility details.
 

@@ -2,12 +2,13 @@
 
 Reference inspection: 2026-09-26. Actual source: Express `src/core/http/endpoint-registry.ts`, module schemas, services, repository and user mapper, `prisma/schema.prisma`; Go `contracts/express-endpoints.json`, HTTP registry/types/routes and service. References were not modified.
 
-27 operation method/path/ID/access/audit/rate/cache/status defaults are copied to contracts/express-endpoints.json. Registry validation compares mounted controller metadata; contract tests compare OpenAPI operation IDs. DTOs derive from source, including auth deletedAt nullable, role permission join wrappers, user flattened role permissions and file metadata only.
+The 27 reference operation method/path/ID/access/audit/rate/cache/status defaults are copied to contracts/express-endpoints.json. Registry validation compares mounted controller metadata; contract tests compare OpenAPI operation IDs. .NET adds `POST /api/auth/refresh` as an auth-rate-limited operation. Auth user DTOs expose only id, email, and roleId; login/refresh return a 15-minute access token and rotating opaque refresh token.
 
 ## Security changes
 
 - Express auth queries do not filter deletedAt; .NET rejects soft-deleted accounts for login/JWT and hides them in user reads. This is an intentional correction, not a claim of identical legacy behavior.
 - .NET JWT refreshes role/email from live database during validation. User deletion uses current role and rejects self-delete.
+- Refresh tokens are stored only as SHA-256 hashes, rotated in serializable database transactions, and reuse revokes the active token family. Absolute family lifetime is 90 days; each token lifetime is 30 days.
 - Required mutation audit is atomic. DB serialization/unique/FK/concurrency conflicts map to 409, preserving database internals.
 - Default .NET Identity hashing is intentionally different from bcrypt. No automatic hash/account sharing; separate PostgreSQL database and EF migration ownership are required.
 - Pagination outside page >= 1, limit 1..100 returns 400; reference schemas accept unconstrained integers, which can reach invalid persistence parameters. This bounded contract is explicit.

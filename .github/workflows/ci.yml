@@ -54,9 +54,9 @@ jobs:
           global-json-file: global.json
       - name: Start isolated S3 fixture
         run: |
-          docker run -d --name s3-fixture -p 19000:9000 -e MINIO_ROOT_USER=ci-fixture -e MINIO_ROOT_PASSWORD=ci-fixture-password minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
-          for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:19000/minio/health/ready && break; sleep 1; done
-          docker run --rm --network host -e MC_HOST_dev=http://ci-fixture:ci-fixture-password@127.0.0.1:19000 minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 mb --ignore-existing dev/uploads
+          docker run -d --name s3-fixture -p 19000:9090 -e COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=uploads adobe/s3mock:5.1.0
+          for attempt in $(seq 1 60); do if curl -fsS http://127.0.0.1:19000/favicon.ico; then exit 0; fi; sleep 1; done
+          exit 1
       - run: dotnet restore --locked-mode
       - run: dotnet test tests/ModularBackend.IntegrationTests -c Release --no-restore --logger trx
       - run: docker build -t modular-net-ci .

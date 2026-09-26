@@ -144,11 +144,11 @@ Integration test memerlukan PostgreSQL dan membuat database sementara yang dapat
 
 ## Keamanan dan batasan
 
-- JWT berlaku 24 jam. Belum ada refresh token atau endpoint revocation; status akun dan permission tetap diperiksa ke database. Ubah masa berlaku di `TokenService` sesuai kebijakan aplikasi.
+- Access token berlaku 15 menit. `POST /api/auth/login` dan `POST /api/auth/refresh` memberikan refresh token yang dirotasi setiap pemakaian; kirim `{ "refreshToken": "..." }` untuk memperbarui token. Perlakukan refresh token sebagai kredensial dan simpan dengan aman. Server hanya menyimpan hash; tiap token berlaku hingga 30 hari dan keluarga token berakhir setelah 90 hari. Pemakaian ulang mencabut keluarga aktif. Respons user auth hanya berisi `id`, `email`, dan `roleId`.
 - Permission upload masih `manage_users`, mengikuti kontrak sumber, sehingga terikat pada administrasi user. Ganti dengan permission khusus saat mengadaptasi template.
 - `GET /api/upload/{id}` memberi metadata file yang dilindungi, bukan bytes. Alur download/presigned URL belum tersedia.
-- [Repository MinIO Community](https://github.com/minio/minio) diarsipkan pada 25 April 2026. Image Compose yang dipin hanya fixture development; gunakan layanan S3 yang masih dipelihara untuk production.
-- Atur TLS, CORS, proxy tepercaya, secret manager, backup, retention, dan telemetry pada deployment Anda. Limiter mode memory berlaku per instance.
+- Profil S3 di Compose dan CI menggunakan [Adobe S3Mock](https://github.com/adobe/S3Mock), fixture pengujian dengan dukungan sebagian API S3 dan bukan untuk production. Gunakan layanan S3 kompatibel yang dikelola/dipelihara untuk deployment.
+- Atur TLS, CORS, proxy tepercaya, secret manager, backup, retention, dan telemetry pada deployment Anda. Untuk beberapa instance API, set `Rate__Store=redis` dan `Rate__InstanceCount` sesuai jumlah replica, lalu isi koneksi Redis yang bisa dijangkau. Validasi startup menolak konfigurasi memory limiter jika jumlah instance yang dideklarasikan lebih dari satu.
 
 Forwarded header diabaikan kecuali IP proxy tepercaya diatur. CORS credentialed nonaktif. Object key upload berupa UUID acak dan signature file divalidasi. Detail policy dan perbedaan kontrak ada di [Operations](docs/OPERATIONS.md) dan [Contracts](docs/CONTRACTS.md).
 

@@ -12,7 +12,8 @@ public sealed record Failure(string Message, IReadOnlyList<string> Errors)
 }
 public sealed record Pagination(int Page, int Limit, int TotalItems, int TotalPages, bool HasNextPage, bool HasPrevPage);
 public sealed record StatusResult(string Status);
-public sealed record TokenResult(string Token);
+public sealed record AuthTokensResult(string AccessToken, string RefreshToken, string TokenType, int ExpiresIn);
+public sealed record RefreshRequest(string RefreshToken);
 public sealed record PermissionSummary(Guid Id, string Name);
 public sealed record PermissionResult(Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 public sealed record RoleGrant(PermissionSummary Permission);
@@ -20,7 +21,7 @@ public sealed record RoleResult(Guid Id, string Name, DateTimeOffset CreatedAt, 
 public sealed record UserRole(Guid Id, string Name, IReadOnlyList<PermissionSummary> Permissions);
 public sealed record UserResult(Guid Id, string Email, Guid RoleId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, UserRole? Role = null);
 public sealed record UserProjection(Guid? Id = null, string? Email = null, Guid? RoleId = null, DateTimeOffset? CreatedAt = null, DateTimeOffset? UpdatedAt = null, UserRole? Role = null);
-public sealed record AuthUserResult(Guid Id, string Email, Guid RoleId, [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTimeOffset? DeletedAt, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record AuthUserResult(Guid Id, string Email, Guid RoleId);
 public sealed record FileResult(Guid Id, string OriginalName, string MimeType, long Size, DateTimeOffset CreatedAt);
 public sealed record UserQuery(int Page = 1, int Limit = 10, string? SortBy = null, string? OrderBy = null, string? Search = null, string? Fields = null);
 public sealed record PageResult(IReadOnlyList<UserProjection> Data, Pagination Meta);

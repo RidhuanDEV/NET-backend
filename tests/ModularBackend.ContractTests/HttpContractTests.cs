@@ -23,7 +23,7 @@ public sealed class HttpContractTests
         var multipart = doc.RootElement.GetProperty("paths").GetProperty("/api/upload").GetProperty("post").GetProperty("requestBody").GetProperty("content");
         Assert.IsTrue(multipart.TryGetProperty("multipart/form-data", out var form));
         Assert.IsTrue(form.GetProperty("schema").GetProperty("properties").TryGetProperty("file", out _)); var ids = doc.RootElement.GetProperty("paths").EnumerateObject().SelectMany(p => p.Value.EnumerateObject()).Select(p => p.Value.GetProperty("operationId").GetString()).ToArray();
-        var registry = new EndpointRegistry(new ConfigurationBuilder().Build()); Assert.HasCount(27, ids);
+        var registry = new EndpointRegistry(new ConfigurationBuilder().Build()); Assert.HasCount(28, ids);
         foreach (var policy in registry.Policies.Values) Assert.IsTrue(ids.Contains(policy.WireId), policy.WireId);
         foreach (var route in new[] { "/health", "/live", "/docs", "/docs/specs/auth.json" }) { using var result = await client.GetAsync(route); Assert.AreEqual(HttpStatusCode.OK, result.StatusCode, route); }
         using var invalid = await client.PostAsJsonAsync("/api/auth/register", new { email = "invalid", password = "x" }); Assert.AreEqual(HttpStatusCode.BadRequest, invalid.StatusCode);

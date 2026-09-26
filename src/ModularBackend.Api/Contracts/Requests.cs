@@ -5,6 +5,7 @@ namespace ModularBackend.Api.Contracts;
 
 public sealed record RegisterRequest([Required, EmailAddress] string Email, [Required, MinLength(6)] string Password);
 public sealed record LoginRequest([Required, EmailAddress] string Email, [Required, MinLength(1)] string Password);
+public sealed record RefreshTokenRequest([Required, MinLength(32), MaxLength(128)] string RefreshToken);
 public sealed record CreateUserRequest([Required, EmailAddress] string Email, [Required, MinLength(6)] string Password, [Required, NonEmptyGuid] Guid RoleId);
 public sealed record UpdateUserRequest([property: JsonConverter(typeof(NonNullStringConverter))][EmailAddress] string? Email = null, [property: JsonConverter(typeof(NonNullGuidConverter))][NonEmptyGuid] Guid? RoleId = null);
 public sealed record CreateRoleRequest([Required, StringLength(64, MinimumLength = 1)] string Name);

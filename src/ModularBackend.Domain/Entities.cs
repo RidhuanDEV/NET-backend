@@ -15,6 +15,18 @@ public sealed class User : Entity
     public Role Role { get; set; } = null!;
     public DateTimeOffset? DeletedAt { get; set; }
 }
+public sealed class RefreshToken
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public required string TokenHash { get; set; }
+    public Guid FamilyId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset FamilyExpiresAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? ReplacedByTokenHash { get; set; }
+}
 public sealed class Role : Entity
 {
     public required string Name { get; set; }

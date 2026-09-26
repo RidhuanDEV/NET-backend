@@ -22,6 +22,24 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ModularBackend.Domain.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("ExpiresAt").HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("FamilyId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("FamilyExpiresAt").HasColumnType("timestamp with time zone");
+                    b.Property<string>("ReplacedByTokenHash").HasMaxLength(64).HasColumnType("character varying(64)");
+                    b.Property<DateTimeOffset?>("RevokedAt").HasColumnType("timestamp with time zone");
+                    b.Property<string>("TokenHash").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                    b.Property<Guid>("UserId").HasColumnType("uuid");
+                    b.HasKey("Id");
+                    b.HasIndex("TokenHash").IsUnique();
+                    b.HasIndex("UserId", "ExpiresAt");
+                    b.HasIndex("FamilyId", "RevokedAt");
+                    b.ToTable("refresh_tokens", (string)null);
+                });
+
             modelBuilder.Entity("ModularBackend.Domain.ActivityLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -155,6 +173,11 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
                     b.HasIndex("PermissionId");
 
                     b.ToTable("role_permissions", (string)null);
+                });
+
+            modelBuilder.Entity("ModularBackend.Domain.RefreshToken", b =>
+                {
+                    b.HasOne("ModularBackend.Domain.User", null).WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade).IsRequired();
                 });
 
             modelBuilder.Entity("ModularBackend.Domain.StoredFile", b =>

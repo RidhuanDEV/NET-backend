@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using ModularBackend.Application;
 namespace ModularBackend.Api.Endpoints;
 
-public enum EndpointId { HealthGet, LiveGet, ReadyGet, DocsSpec, DocsModuleSpec, DocsUi, AuthRegister, AuthLogin, AuthMe, UserList, UserGet, UserCreate, UserUpdate, UserDelete, RoleList, RoleGet, RoleCreate, RoleUpdate, RoleDelete, RoleAssignPermissions, PermissionList, PermissionGet, PermissionCreate, PermissionUpdate, PermissionDelete, UploadCreate, UploadGet }
+public enum EndpointId { HealthGet, LiveGet, ReadyGet, DocsSpec, DocsModuleSpec, DocsUi, AuthRegister, AuthLogin, AuthRefresh, AuthMe, UserList, UserGet, UserCreate, UserUpdate, UserDelete, RoleList, RoleGet, RoleCreate, RoleUpdate, RoleDelete, RoleAssignPermissions, PermissionList, PermissionGet, PermissionCreate, PermissionUpdate, PermissionDelete, UploadCreate, UploadGet }
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class EndpointAttribute(EndpointId id) : Attribute { public EndpointId Id { get; } = id; }
 public sealed record EndpointPolicy(EndpointId Id, string WireId, string Method, string Path, string Module, bool Public, string Permission, AuditMode Audit, RateLimitGroup RateLimit, CacheMode Cache, int Status);
@@ -22,6 +22,7 @@ new(EndpointId.DocsModuleSpec, "docs.moduleSpec", "GET", "/docs/specs/{module}.j
 new(EndpointId.DocsUi, "docs.ui", "GET", "/docs", "docs", true, "", AuditMode.None, RateLimitGroup.Public, CacheMode.Off, 200),
 new(EndpointId.AuthRegister, "auth.register", "POST", "/api/auth/register", "auth", true, "", AuditMode.Required, RateLimitGroup.Auth, CacheMode.Off, 201),
 new(EndpointId.AuthLogin, "auth.login", "POST", "/api/auth/login", "auth", true, "", AuditMode.Optional, RateLimitGroup.Auth, CacheMode.Off, 200),
+new(EndpointId.AuthRefresh, "auth.refresh", "POST", "/api/auth/refresh", "auth", true, "", AuditMode.None, RateLimitGroup.Auth, CacheMode.Off, 200),
 new(EndpointId.AuthMe, "auth.me", "GET", "/api/auth/me", "auth", false, "", AuditMode.None, RateLimitGroup.Internal, CacheMode.Off, 200),
 new(EndpointId.UserList, "user.list", "GET", "/api/users", "user", false, "manage_users", AuditMode.None, RateLimitGroup.Internal, CacheMode.Read, 200),
 new(EndpointId.UserGet, "user.get", "GET", "/api/users/{id}", "user", false, "manage_users", AuditMode.None, RateLimitGroup.Internal, CacheMode.Read, 200),
