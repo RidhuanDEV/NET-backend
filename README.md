@@ -39,7 +39,7 @@ Try login and a protected request (replace the password with your configured boo
 curl -s http://localhost:5080/api/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@example.test","password":"YOUR_BOOTSTRAP_PASSWORD"}'
 ```
 
-Copy `data.token` from the response and use it with a protected endpoint:
+Copy `data.accessToken` from the response and use it with a protected endpoint:
 
 ```sh
 curl http://localhost:5080/api/auth/me -H 'Authorization: Bearer YOUR_TOKEN'

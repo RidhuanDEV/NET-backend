@@ -34,7 +34,7 @@ Coba login:
 curl -s http://localhost:5080/api/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@example.test","password":"PASSWORD_BOOTSTRAP_ANDA"}'
 ```
 
-Salin `data.token`, lalu panggil endpoint terlindungi:
+Salin `data.accessToken`, lalu panggil endpoint terlindungi:
 
 ```sh
 curl http://localhost:5080/api/auth/me -H 'Authorization: Bearer TOKEN_ANDA'
