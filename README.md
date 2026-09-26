@@ -1,124 +1,170 @@
 # Modular .NET Backend
 
-Template modular monolith ASP.NET Core Controllers, .NET 10 LTS dan PostgreSQL tersendiri. Library dipasang dari penerbit resmi: Microsoft, Npgsql, AWS dan proyek OpenTelemetry. Lihat [DEPENDENCIES.md](DEPENDENCIES.md), [rencana implementasi](IMPLEMENTATION-PLAN.md) dan [kontrak](docs/CONTRACTS.md).
+[![CI](https://github.com/RidhuanDEV/NET-backend/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/RidhuanDEV/NET-backend/actions/workflows/ci.yml)
 
-Repository: https://github.com/RidhuanDEV/NET-backend.git. Kode lokal tidak otomatis dipush atau dipublish.
+Read this in [Bahasa Indonesia](README.id.md).
 
-## Prasyarat
+A ready-to-run modular monolith backend template built with ASP.NET Core 10, PostgreSQL, and libraries from their official publishers. Start with Docker Compose, then add your application modules on top of the included JWT authentication, database-backed RBAC, audit log, local/S3 uploads, Redis rate limits and cache, health checks, OpenAPI, and OpenTelemetry hooks.
 
-- .NET SDK **10.0.401**, dipin melalui `global.json`; runtime **10.0.12**.
-- PostgreSQL 18.3; Redis 8.6.1 hanya bila cache/limiter Redis dipilih.
-- Docker Desktop/Engine dengan Compose untuk alur container, atau layanan PostgreSQL sendiri untuk alur manual.
-- PowerShell 7 pada Windows; Python 3 hanya bila memakai loader `.env` lintas platform.
+Built for teams starting a new API that want a typed modular structure and explicit operational controls. It may be more than you need for a small prototype, serverless function, or application that requires independent deployable services from day one.
 
-Install SDK melalui [installer/script resmi Microsoft](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script), bukan membuat runtime sendiri. Package NuGet dipulihkan dari `nuget.org`, versi terpusat dan dependency graph dikunci oleh `packages.lock.json`. Pada komputer dengan instalasi SDK user-local, `scripts/run.ps1` memilih `%LOCALAPPDATA%\Microsoft\dotnet\dotnet.exe`.
+## Quick start
 
-## Konfigurasi awal
+You need Git, Docker Desktop or Docker Engine with Compose, and a terminal. The Compose images pin the tested runtime versions. To build or run .NET tools on your host, install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) using [Microsoft's official installer](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script).
 
-Salin `.env.example` menjadi `.env`. Ganti seluruh `CHANGE_ME` dengan nilai baru; jangan memasukkan secrets nyata ke file contoh atau Git. Untuk JWT gunakan minimal 32 byte acak, misalnya hasil `RandomNumberGenerator.GetBytes(32)` yang dikonversi menjadi hex. Buat password PostgreSQL dan bootstrap yang berbeda. Bootstrap minimal 12 karakter.
+```sh
+git clone https://github.com/RidhuanDEV/NET-backend.git
+cd NET-backend
+cp .env.example .env
+```
 
-Nama environment .NET memakai `__`: `Database__ConnectionString`, `Jwt__Secret`, `Rate__Store`, `Upload__Storage`, dan seterusnya. `.env` tidak dimuat otomatis oleh .NET. Compose membacanya; loader berikut memasukkannya ke environment proses tanpa mengevaluasi kode atau mencetak nilai.
+Generate a JWT secret and paste the result into `Jwt__Secret`. Edit `.env`: set different strong values for `POSTGRES_PASSWORD` and `Bootstrap__Password`. Replace the S3 `CHANGE_ME` values before enabling that profile.
 
-## Menjalankan di Windows
+```sh
+openssl rand -hex 32
+```
+
+Then start the stack and apply the first seed:
+
+```sh
+docker compose up --build -d
+docker compose --profile seed run --rm seeder
+```
+
+Compose applies PostgreSQL migrations before starting the API. Seeding is an explicit step; API startup never changes the schema or creates accounts. Open [http://localhost:5080/docs](http://localhost:5080/docs) for the API specifications. The bootstrap email and password are the values you set in `.env`.
+
+Try login and a protected request (replace the password with your configured bootstrap value):
+
+```sh
+curl -s http://localhost:5080/api/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@example.test","password":"YOUR_BOOTSTRAP_PASSWORD"}'
+```
+
+Copy `data.token` from the response and use it with a protected endpoint:
+
+```sh
+curl http://localhost:5080/api/auth/me -H 'Authorization: Bearer YOUR_TOKEN'
+```
+
+On PowerShell, replace `cp` with `Copy-Item .env.example .env` and use `curl.exe` for the sample HTTP request. Stop local services with `docker compose down`; add `-v` only when you intend to delete their database and upload volumes.
+
+## Create a project
+
+The recommended path is the interactive initializer included in the repository. It calls Microsoft's `dotnet new` engine, asks for project settings, generates fresh local secrets and restores packages:
 
 ```powershell
-Copy-Item .env.example .env
-# Edit .env dan ganti placeholders dahulu.
-docker compose up -d postgres
+pwsh -File scripts/run.ps1 run --project tools/ModularBackend.Initializer -- ../MyBackend
+```
+
+On Linux or macOS:
+
+```sh
+python3 scripts/run.py run --project tools/ModularBackend.Initializer -- ../MyBackend
+```
+
+Use the initializer when you want a guided project setup. Use `dotnet new` directly when you want to automate choices or install the template into the CLI. The NuGet package is not published yet; build and install it from the cloned repository:
+
+```sh
+dotnet pack templates/ModularBackend.Template.csproj -c Release -o artifacts/packages
+dotnet new install artifacts/packages/RidhuanDEV.ModularBackend.Template.0.1.0.nupkg
+dotnet new modular-net --name MyBackend --output ../MyBackend --port 5180
+```
+
+## Features
+
+- JWT bearer authentication with live account and permission checks from PostgreSQL.
+- Role and permission management, soft deletion, optimistic concurrency, and auditable mutations.
+- PostgreSQL migrations and seeding as separate commands; neither runs during API startup.
+- Local or S3 object storage, file signature checks, size limits, and orphan cleanup.
+- Optional shared Redis rate limiting and typed response caching.
+- Generated OpenAPI specifications, health/readiness endpoints, CORS controls, and OpenTelemetry instrumentation.
+- Locked NuGet dependency graph, pinned SDK, container images, and Windows/Linux CI workflow.
+
+## Structure and module boundaries
+
+```mermaid
+flowchart LR
+  Api --> Application
+  Api -- composition root --> Infrastructure
+  Infrastructure -- implements ports --> Application
+  Application --> Domain
+  Infrastructure --> Domain
+```
+
+`Api` owns HTTP controllers, DTO binding, middleware, endpoint policies, and dependency injection. `Application` owns use cases and explicit ports. `Infrastructure` implements those ports with EF Core, PostgreSQL, Redis, and storage SDKs. `Domain` owns entities and has no infrastructure dependency. The project references enforce the build dependency direction; there is no separate architecture-test package in this template.
+
+The starter currently groups use cases in `BackendService` and persistence in `BackendStore`; it does not claim that every starter feature is already an isolated module folder. Follow the module conventions in [Adding a module](docs/ADDING-MODULES.md) when extending it. The database is dedicated to this application and managed by its EF Core migrations; it is not shared with another service's migration history.
+
+## Add a module
+
+See the full [step-by-step module guide](docs/ADDING-MODULES.md). In short:
+
+1. Add typed domain entities and request/response contracts.
+2. Add a focused application use case and explicit persistence port methods.
+3. Implement those methods in Infrastructure and configure constraints/indexes in `BackendDbContext`.
+4. Add a controller, endpoint ID, route/policy registry entry, and OpenAPI response metadata.
+5. Add any new permission to the seed and registry allowlist; grant it to roles deliberately.
+6. Create an EF migration with the official `dotnet ef` tool and run unit, contract, and service-backed integration checks.
+
+## Configuration
+
+Copy `.env.example` to `.env` for Compose. .NET itself does not read `.env`; `scripts/run.ps1` and `scripts/run.py` load it for local commands. The initializer writes new random development secrets into the generated project's ignored `.env` file. For manual setup, use `openssl rand -hex 32` for the JWT secret; PowerShell equivalent: `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))`.
+
+| Setting | Purpose |
+| --- | --- |
+| `Database__ConnectionString` | Dedicated application PostgreSQL database |
+| `Jwt__Secret`, `Jwt__Issuer`, `Jwt__Audience` | Token signing and validation; keep the secret private and use at least 32 random bytes |
+| `Bootstrap__Email`, `Bootstrap__Password` | Optional initial admin created only by the explicit seeder |
+| `Cors__Origins__0` | Allowed browser origin; production origins must be explicit |
+| `Rate__Store`, `Redis__ConnectionString` | Choose per-instance memory or shared Redis limiting |
+| `Cache__Enabled`, `Redis__ConnectionString` | Enable typed response caching |
+| `Upload__Storage`, `Upload__Endpoint`, `Upload__Bucket` | Select local disk or S3-compatible storage |
+| `Telemetry__Enabled`, `Telemetry__Endpoint` | Enable OTLP export to your collector |
+
+The complete options and Compose port settings are listed in [.env.example](.env.example) and [the operations guide](docs/OPERATIONS.md). Configuration is read at process start; deploy a restart to apply changes.
+
+## Run without Docker
+
+Install .NET SDK 10.0.401 as pinned by `global.json`, and provide a reachable PostgreSQL database. Redis and S3-compatible storage are needed only when their features are enabled. Set the connection string and secrets in your process environment or `.env`, then run:
+
+```powershell
 pwsh -File scripts/run.ps1 restore --locked-mode
 pwsh -File scripts/run.ps1 run --project tools/ModularBackend.Migrator
 pwsh -File scripts/run.ps1 run --project tools/ModularBackend.Seeder
 pwsh -File scripts/run.ps1
 ```
 
-API: `http://localhost:5080`; spesifikasi: `/docs`. Untuk PostgreSQL sendiri, sesuaikan `Database__ConnectionString` dan lewati perintah Docker. Database ini harus berbeda dari database Prisma/Goose referensi.
+On Linux/macOS, replace `scripts/run.ps1 ...` with `python3 scripts/run.py ...` and use `python3 scripts/run.py` to start the API. Set `Database__ConnectionString` to the host and database actually used. Never point this migrator at another service's database.
 
-## Menjalankan di Linux
+## Test and verify
 
 ```sh
-cp .env.example .env
-# Edit .env, lalu:
 dotnet restore --locked-mode
-python3 scripts/run.py run --project tools/ModularBackend.Migrator
-python3 scripts/run.py run --project tools/ModularBackend.Seeder
-python3 scripts/run.py
+dotnet build -c Release --no-restore -warnaserror
+dotnet format --verify-no-changes --no-restore
+dotnet test ModularBackend.slnx -c Release --no-build
+dotnet list package --vulnerable --include-transitive
 ```
 
-Native environment dan development user-secrets tetap tersedia tanpa loader. Penggantian konfigurasi memerlukan restart/redeploy. Tidak ada konfigurasi admin runtime.
+Integration tests require PostgreSQL and create a temporary database that the test user can create and drop. Redis and S3 scenarios need their matching services. A test without a required service is reported as inconclusive; it does not count as a pass. The checked-in [CI workflow](.github/workflows/ci.yml) defines Windows/Linux quality jobs and a Linux integration job. Local build evidence does not imply deployment or capacity testing. See the [acceptance report](docs/ACCEPTANCE-REPORT.md) for the evidence snapshot and its limits.
 
-## Compose lengkap
+## Security and known limits
 
-```powershell
-docker compose up --build -d
-docker compose run --rm --entrypoint dotnet app /app/seeder/ModularBackend.Seeder.dll
-```
+- Access tokens expire after 24 hours. There is no refresh token or token revocation endpoint; account status and current permissions are still checked against the database. Change the configured token lifetime in `TokenService` if your application's risk policy requires shorter sessions.
+- Uploads and file metadata are protected by `manage_users` in the starter registry. This follows the source contract but couples file access to user administration; replace it with a dedicated permission when adapting the template.
+- `GET /api/upload/{id}` returns protected file metadata, not file bytes. There is no download endpoint or presigned URL flow in this starter.
+- [MinIO's community repository](https://github.com/minio/minio) was archived on April 25, 2026. The pinned optional Compose image remains a development fixture; use a maintained S3-compatible service for ongoing production use.
+- Configure TLS termination, explicit CORS origins, trusted proxy addresses, secrets storage, backups, retention, and telemetry for your deployment. Redis memory mode limits each API instance separately.
 
-Migrator berjalan sekali sebelum app. API tidak melakukan migrate/seed saat startup. Data PostgreSQL dan file lokal memakai volume berbeda. Port HTTP default 5080, PostgreSQL 55432; sesuaikan `.env` atau salin `compose.override.yaml.example` menjadi `compose.override.yaml`.
+Forwarded headers are ignored unless trusted proxy IPs are configured. Credentialed CORS is disabled. Upload object keys use random UUIDs and allowed file signatures are checked. See [Operations](docs/OPERATIONS.md) and [reference contract differences](docs/CONTRACTS.md) for policy, audit/cache behavior, storage setup, and compatibility details.
 
-Redis: ubah `Rate__Store=redis` dan/atau `Cache__Enabled=true`, lalu gunakan `COMPOSE_PROFILES=redis`. Dua replica atau lebih wajib `Rate__InstanceCount` sesuai jumlahnya dan limiter Redis. Limiter memory hanya berlaku pada satu instance.
+## Compatibility
 
-S3 development: `Upload__Storage=s3`, endpoint manual `http://localhost:19000`, `COMPOSE_PROFILES=s3` (atau `redis,s3`), isi access key/secret dan bucket. Profile menggunakan image MinIO resmi yang dikunci digest untuk pengujian lokal. Community MinIO telah diarsipkan; gunakan layanan S3 yang masih dipelihara untuk production. Endpoint container default `http://minio:9000`; S3 eksternal memakai `S3_ENDPOINT_DOCKER`; untuk endpoint default AWS set nilai kosong dan pilih region, serta gunakan credential chain resmi AWS. Kredensial AWS default chain didukung bila access key/secret kosong.
+The template targets [.NET 10 LTS](https://dotnet.microsoft.com/en-us/platform/support/policy), currently supported through November 14, 2028. `global.json` pins SDK 10.0.401 with `rollForward: disable` to make builds reproducible; another SDK patch must be installed to build this checkout. Runtime images pin ASP.NET Core 10.0.12. PostgreSQL 18.3 and Redis 8.6.1 are the versions used by the Compose/CI fixtures, not declared minimums for every external deployment. Recheck the supported product versions before upgrading.
 
-## API dan akses
+## Contribute and report security issues
 
-- Success: `{"success":true,"data":...}`; list users memiliki `meta` pagination.
-- Failure: `{"success":false,"message":"...","errors":[]}`; delete 204 tanpa body.
-- Auth: register, login, me. JWT HS256 berlaku 24 jam; signature, issuer, audience, expiry dan clock skew 30 detik diperiksa.
-- Users memerlukan `manage_users`; roles `manage_roles`; permissions `manage_permissions`. Upload juga `manage_users`. Grant dan status akun selalu dibaca dari database.
-- Upload field multipart `file`, PNG/JPEG/PDF dengan signature dan batas ukuran. Nama asli hanya metadata; objek memakai UUID. Tidak ada endpoint download publik.
-- `/health` dan `/live` memeriksa HTTP; `/ready` memeriksa PostgreSQL serta Redis bila limiter memerlukannya. Redis untuk cache saja tidak menurunkan readiness.
+Read [Contributing](CONTRIBUTING.md) before opening a change. Report suspected vulnerabilities privately using GitHub's [security advisory reporting](https://github.com/RidhuanDEV/NET-backend/security/advisories/new); do not post exploit details in a public issue. See [Security policy](SECURITY.md) for supported versions and response expectations. Template releases follow SemVer; see [Changelog](CHANGELOG.md).
 
-Seed membuat admin/user dan tiga permission. Akun bootstrap dibuat bila `Bootstrap__Email`/`Bootstrap__Password` tersedia; seed ulang tidak mengganti password akun yang sudah ada.
+## License
 
-## Endpoint policies
-
-`ENDPOINT_POLICIES_JSON={"user.get":{"audit":"optional","cache":"off"}}` mengubah policy startup untuk ID yang dikenal. Unknown ID/property/enum ditolak; GET audit required ditolak karena jaminan producer belum disediakan. Required audit mutasi masuk transaksi yang sama; optional audit ditulis setelah commit dengan timeout. Tidak ada token/hash/password di snapshot.
-
-Cache DTO bertipe default off; tanpa koneksi Redis ketika tidak dipakai. Versi database berubah atomik bersama mutasi, sehingga cache antar-instance tidak kembali stale setelah Redis outage; Redis generation juga diincrement setelah commit. Cache korup/down fallback ke DB. Set prefix unik untuk setiap deployment/database.
-
-Forwarded client headers hanya boleh diaktifkan untuk IP proxy yang dikenal. Default tidak mempercayai forwarded headers; lihat konfigurasi proxy di [runbook](docs/OPERATIONS.md). Production wajib origins CORS eksplisit; credentialed CORS default off.
-
-## Proyek baru
-
-```powershell
-pwsh -File scripts/run.ps1 run --project tools/ModularBackend.Initializer -- ../MyBackend
-# Tanpa prompt dan tanpa restore:
-pwsh -File scripts/run.ps1 run --project tools/ModularBackend.Initializer -- --yes --no-restore ../MyBackend
-```
-
-Wizard menggunakan mesin template resmi `dotnet new`, menolak target berisi file, menanyakan port/database/Redis/storage, membuat secrets baru di `.env`, dan menjalankan restore kecuali dimatikan. Setelah dibuat, konfigurasi database, migrasi dan seed dilakukan eksplisit.
-
-Atau install template lokal dan gunakan CLI Microsoft:
-
-```sh
-dotnet pack templates/ModularBackend.Template.csproj -c Release -o artifacts/packages
-dotnet new install artifacts/packages/RidhuanDEV.ModularBackend.Template.0.1.0.nupkg
-dotnet new modular-net -n MyBackend -o ../MyBackend --port 5180
-```
-
-Paket NuGet disiapkan lokal, tidak dipublish otomatis. Periksa isi paket dan gate initializer sebelum distribusi.
-
-## Verifikasi
-
-```powershell
-pwsh -File scripts/run.ps1 restore --locked-mode
-pwsh -File scripts/run.ps1 build -c Release --no-restore -warnaserror
-pwsh -File scripts/run.ps1 format --verify-no-changes --no-restore
-pwsh -File scripts/run.ps1 test -c Release --no-restore
-pwsh -File scripts/run.ps1 list package --vulnerable --include-transitive
-```
-
-Integration tests membuat database sementara dengan nama acak dan menghapusnya sesudah test; user PostgreSQL test harus boleh membuat database. Mereka memerlukan PostgreSQL nyata; Redis/S3 tests memerlukan environment sesuai `.env`. Tanpa layanan tes terkait berstatus inconclusive, bukan dianggap lulus. Contract/unit tests tidak membutuhkan layanan eksternal. Laporan bukti dan gate yang belum dijalankan ada di [ACCEPTANCE-REPORT.md](docs/ACCEPTANCE-REPORT.md).
-
-## Arsitektur
-
-`Api -> Infrastructure -> Application -> Domain`. DTO tidak menyerialisasi entity EF. Use case mengatur transaksi melalui persistence port khusus; EF Core menyediakan tracking/unit of work. Migrator, Seeder, UploadCleanup dan Initializer adalah executable terpisah. Timestamp disimpan `timestamptz` UTC dan dikirim RFC3339 UTC; penyajian zona IANA tidak menggeser data database.
-
-Cleanup orphan default dry run:
-
-```powershell
-pwsh -File scripts/run.ps1 run --project tools/ModularBackend.UploadCleanup
-pwsh -File scripts/run.ps1 run --project tools/ModularBackend.UploadCleanup -- --apply
-```
-
-Lihat [OPERATIONS.md](docs/OPERATIONS.md) untuk release, rollback, backup/restore, retention dan telemetry. Hasil build/test lokal tidak membuktikan kapasitas/SLA atau kesiapan deployment production tertentu.
+This project is licensed under the [MIT License](LICENSE).

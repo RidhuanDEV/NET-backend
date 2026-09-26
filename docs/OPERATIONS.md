@@ -12,6 +12,10 @@ Terminate TLS at a trusted reverse proxy. Configure known proxy IPs explicitly b
 
 Readiness is /ready; liveness is /live. A cache-only Redis outage is a cache miss and must not restart healthy replicas. A required limiter outage makes readiness fail; auth fails closed while public/internal remain available per policy.
 
+## Endpoint policy configuration
+
+`ENDPOINT_POLICIES_JSON` can override `audit`, `rateLimit`, and `cache` for a registered endpoint ID at process startup. For example, `{"user.get":{"audit":"optional","cache":"off"}}`. Unknown IDs, properties, and enum values fail startup. Required audit is unavailable on GET because the request pipeline does not provide a transactional producer for read endpoints. Required audit on mutations is inserted in the same PostgreSQL transaction as the mutation; optional audit is recorded after commit and may fail without undoing that committed mutation. Snapshot values are redacted before persistence. See the [endpoint registry](../src/ModularBackend.Api/Endpoints/EndpointRegistry.cs) for IDs and defaults.
+
 ## Observability
 
 JSON console logs include request ID, HTTP status and duration without request bodies/tokens. Restrict log access and define retention in deployment. Optional OTLP configuration uses official OpenTelemetry packages; enable `Telemetry__Enabled`, Endpoint and ServiceName. Confirm the collector and instrumented span sources in staging rather than assuming exporter configuration proves delivery.

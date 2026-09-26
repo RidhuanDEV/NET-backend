@@ -25,6 +25,7 @@ services:
     build: .
     env_file: .env
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       Database__ConnectionString: Host=postgres;Database=${POSTGRES_DB:-modular_net};Username=${POSTGRES_USER:-modular_net};Password=${POSTGRES_PASSWORD}
       Redis__ConnectionString: redis:6379
@@ -35,6 +36,16 @@ services:
     depends_on:
       migrate: {condition: service_completed_successfully}
     restart: unless-stopped
+  seeder:
+    build: .
+    profiles: [seed]
+    entrypoint: ["dotnet", "/app/seeder/ModularBackend.Seeder.dll"]
+    env_file: .env
+    environment:
+      Database__ConnectionString: Host=postgres;Database=${POSTGRES_DB:-modular_net};Username=${POSTGRES_USER:-modular_net};Password=${POSTGRES_PASSWORD}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    restart: "no"
   redis:
     image: redis:8.6.1-alpine
     profiles: [redis]

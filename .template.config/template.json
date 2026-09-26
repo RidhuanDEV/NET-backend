@@ -13,7 +13,7 @@
   "sources": [{
     "source": "./",
     "target": "./",
-    "include": [".template.config/template.json", "src/**", "tools/**", "tests/**", "contracts/**", "docs/**", "scripts/**", ".github/workflows/**", "templates/**", "*.md", "ModularBackend.slnx", "global.json", "Directory.Build.props", "Directory.Packages.props", "NuGet.Config", "dotnet-tools.json", ".gitignore", ".gitattributes", ".dockerignore", ".editorconfig", ".env.example", "Dockerfile", "compose.yaml", "compose.override.yaml.example"],
+    "include": [".template.config/template.json", "src/**", "tools/**", "tests/**", "contracts/**", "docs/**", "scripts/**", ".github/workflows/**", "templates/**", "*.md", "LICENSE", "ModularBackend.slnx", "global.json", "Directory.Build.props", "Directory.Packages.props", "NuGet.Config", "dotnet-tools.json", ".gitignore", ".gitattributes", ".dockerignore", ".editorconfig", ".env.example", "Dockerfile", "compose.yaml", "compose.override.yaml.example"],
     "exclude": ["**/bin/**", "**/obj/**", "**/.env", "**/.git/**", "**/uploads/**", "**/artifacts/**", "**/TestResults/**", "**/*.user", "**/launchSettings.json"]
   }]
 }
