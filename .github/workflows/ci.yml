@@ -1,0 +1,67 @@
+name: backend-quality
+on:
+  push:
+  pull_request:
+jobs:
+  quality:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet build -c Release --no-restore -warnaserror
+      - run: dotnet format --verify-no-changes --no-restore
+      - run: dotnet test tests/ModularBackend.UnitTests -c Release --no-build
+      - run: dotnet test tests/ModularBackend.ContractTests -c Release --no-build
+      - run: dotnet list package --vulnerable --include-transitive
+      - run: pwsh -File scripts/verify-initializer.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi-${{ matrix.os }}
+          path: artifacts/openapi
+  runtime:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.3-alpine
+        env:
+          POSTGRES_USER: modular_net
+          POSTGRES_PASSWORD: ci-fixture-password
+          POSTGRES_DB: modular_net
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U modular_net -d modular_net"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:8.6.1-alpine
+        ports: [6379:6379]
+    env:
+      Database__ConnectionString: Host=127.0.0.1;Database=modular_net;Username=modular_net;Password=ci-fixture-password
+      Redis__ConnectionString: 127.0.0.1:6379
+      Upload__Endpoint: http://127.0.0.1:19000
+      Upload__Bucket: uploads
+      Upload__AccessKey: ci-fixture
+      Upload__SecretKey: ci-fixture-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Start isolated S3 fixture
+        run: |
+          docker run -d --name s3-fixture -p 19000:9000 -e MINIO_ROOT_USER=ci-fixture -e MINIO_ROOT_PASSWORD=ci-fixture-password minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+          for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:19000/minio/health/ready && break; sleep 1; done
+          docker run --rm --network host -e MC_HOST_dev=http://ci-fixture:ci-fixture-password@127.0.0.1:19000 minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 mb --ignore-existing dev/uploads
+      - run: dotnet restore --locked-mode
+      - run: dotnet test tests/ModularBackend.IntegrationTests -c Release --no-restore --logger trx
+      - run: docker build -t modular-net-ci .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-results
+          path: '**/TestResults/*.trx'

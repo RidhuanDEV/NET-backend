@@ -1,0 +1,44 @@
+using ModularBackend.Domain;
+
+namespace ModularBackend.Application;
+
+public interface IBackendStore
+{
+    Task<User?> UserAsync(Guid id, CancellationToken ct);
+    Task<User?> UserByEmailAsync(string email, CancellationToken ct);
+    Task<Role?> RoleAsync(Guid id, CancellationToken ct);
+    Task<Role?> RoleByNameAsync(string name, CancellationToken ct);
+    Task<Permission?> PermissionAsync(Guid id, CancellationToken ct);
+    Task<IReadOnlyList<Role>> RolesAsync(CancellationToken ct);
+    Task<IReadOnlyList<Permission>> PermissionsAsync(CancellationToken ct);
+    Task<(IReadOnlyList<User> Rows, int Total)> UsersAsync(UserQuery query, CancellationToken ct);
+    Task<bool> HasPermissionAsync(Guid userId, string permission, CancellationToken ct);
+    Task<bool> HasRoleUsersAsync(Guid roleId, CancellationToken ct);
+    Task<StoredFile?> FileAsync(Guid id, CancellationToken ct);
+    Task<bool> IsFileReferencedAsync(string objectKey, CancellationToken ct);
+    void AddUser(User user);
+    void AddRole(Role role);
+    void AddPermission(Permission permission);
+    void RemoveRole(Role role);
+    void RemovePermission(Permission permission);
+    void AddFile(StoredFile file);
+    void AddAudit(ActivityLog log);
+    Task BeginAsync(CancellationToken ct);
+    Task CommitAsync(CancellationToken ct);
+    Task RollbackAsync(CancellationToken ct);
+    Task SaveAsync(CancellationToken ct);
+}
+public interface IPasswordService
+{
+    string Hash(User user, string password);
+    bool Verify(User user, string password);
+}
+public interface ITokenService { string Issue(User user); }
+public interface IAuditFailureReporter { void Report(Exception exception, string endpointId); }
+public sealed record StoredObject(string Storage, string Key);
+public interface IObjectStorage
+{
+    Task<StoredObject> PutAsync(Stream stream, string mime, CancellationToken ct);
+    Task RemoveAsync(StoredObject storedObject, CancellationToken ct);
+}
+public interface ICacheInvalidation { Task InvalidateAsync(CancellationToken ct); }

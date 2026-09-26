@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.env
+uploads/
+TestResults/
+artifacts/
+.vs/
+*.user
+
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+compose.override.yaml
