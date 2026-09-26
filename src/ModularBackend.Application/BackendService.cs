@@ -81,7 +81,7 @@ public sealed class BackendService(IBackendStore store, IPasswordService passwor
         if (user is null || user.DeletedAt is not null || !passwords.Verify(user, password)) throw new ApiException(401, "Invalid email or password");
         var (refresh, plaintext) = CreateRefreshToken(user.Id);
         await store.BeginAsync(ct);
-        try { store.AddRefreshToken(refresh); if (ctx.Audit == AuditMode.Required) store.AddAudit(Audit(ctx with { Actor = new(user.Id, user.Email, user.RoleId) }, "LOGIN", user.Id, null, JsonSerializer.Serialize(new PermissionSummary(user.Id, user.Email)))); await store.CommitAsync(ct); }
+        try { store.AddRefreshToken(refresh); if (ctx.Audit == AuditMode.Required) store.AddAudit(Audit(ctx with { Actor = new(user.Id, user.Email, user.RoleId) }, "LOGIN", user.Id, null, JsonSerializer.Serialize(new PermissionSummary(user.Id, user.Email)))); await store.CommitAsync(ct, invalidateCache: false); }
         catch { await store.RollbackAsync(CancellationToken.None); throw; }
         if (ctx.Audit == AuditMode.Optional) await OptionalAuditAsync(Audit(ctx with { Actor = new(user.Id, user.Email, user.RoleId) }, "LOGIN", user.Id, null, null));
         return IssuePair(user, plaintext);
@@ -97,20 +97,20 @@ public sealed class BackendService(IBackendStore store, IPasswordService passwor
             if (current.RevokedAt is not null)
             {
                 await store.RevokeRefreshFamilyAsync(current.FamilyId, now, ct);
-                await store.CommitAsync(ct);
+                await store.CommitAsync(ct, invalidateCache: false);
                 throw new ApiException(401, "Refresh token reuse detected");
             }
             var user = await store.UserAsync(current.UserId, ct);
             if (current.ExpiresAt <= now || current.FamilyExpiresAt <= now || user is null || user.DeletedAt is not null)
             {
                 await store.RevokeRefreshFamilyAsync(current.FamilyId, now, ct);
-                await store.CommitAsync(ct);
+                await store.CommitAsync(ct, invalidateCache: false);
                 throw new ApiException(401, "Refresh token expired or inactive");
             }
             var (replacement, plaintext) = CreateRefreshToken(user.Id, current.FamilyId, current.FamilyExpiresAt);
             current.RevokedAt = now; current.ReplacedByTokenHash = replacement.TokenHash;
             store.AddRefreshToken(replacement);
-            await store.CommitAsync(ct);
+            await store.CommitAsync(ct, invalidateCache: false);
             return IssuePair(user, plaintext);
         }
         catch (ApiException) { await store.RollbackAsync(CancellationToken.None); throw; }

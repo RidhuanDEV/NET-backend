@@ -43,11 +43,11 @@ public sealed class BackendStore(BackendDbContext db) : IBackendStore
     public void AddAudit(ActivityLog log) => db.ActivityLogs.Add(log);
     public void AddRefreshToken(RefreshToken token) => db.RefreshTokens.Add(token);
     public async Task BeginAsync(CancellationToken ct) => transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-    public async Task CommitAsync(CancellationToken ct)
+    public async Task CommitAsync(CancellationToken ct, bool invalidateCache = true)
     {
         await SaveAsync(ct);
         if (transaction is null) throw new InvalidOperationException("No transaction");
-        await db.CacheGenerations.Where(x => x.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(x => x.Version, x => x.Version + 1), ct);
+        if (invalidateCache) await db.CacheGenerations.Where(x => x.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(x => x.Version, x => x.Version + 1), ct);
         try { await transaction.CommitAsync(ct); } catch (PostgresException ex) when (ex.SqlState == "40001") { throw new ApiException(409, "Concurrent change; retry request"); }
         await transaction.DisposeAsync(); transaction = null;
     }

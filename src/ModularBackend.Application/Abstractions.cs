@@ -27,7 +27,7 @@ public interface IBackendStore
     void AddAudit(ActivityLog log);
     void AddRefreshToken(RefreshToken token);
     Task BeginAsync(CancellationToken ct);
-    Task CommitAsync(CancellationToken ct);
+    Task CommitAsync(CancellationToken ct, bool invalidateCache = true);
     Task RollbackAsync(CancellationToken ct);
     Task SaveAsync(CancellationToken ct);
 }
