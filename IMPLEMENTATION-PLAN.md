@@ -22,6 +22,8 @@ Target: modular-NET (user override of modular-dotnet). Reference repositories ar
 
 ## Status
 
+Notifications extension (29 September 2026): entity/migration EF, application service, infrastructure store, optional MailKit SMTP, authenticated SSE, registry/OpenAPI, and focused PostgreSQL test implemented. Full CI, Redis/S3 and deployment verification remain separate gates. The notification API uses a four-operation parity fixture in `contracts/notification-endpoints.json`.
+
 Stages 1–6 implemented. Stage 7 local evidence: locked dependency restore, zero-warning Release build, formatting, 4 unit + 3 contract + 13 integration tests passed on Windows. Earlier Linux source and generated-template snapshots each passed 4 unit + 3 contract + 11 integration tests. Native initializer and generated Release build/unit/contract tests passed. Docker default HTTP smoke passed. Dependency audit reported no known vulnerabilities. See docs/ACCEPTANCE-REPORT.md for snapshot boundaries and external gates.
 
 Origin is configured to https://github.com/RidhuanDEV/NET-backend.git on codex/bootstrap-template. Initial source delivery is authorized for commit and push. Remote CI results must be checked after delivery; production acceptance remains unexecuted.
