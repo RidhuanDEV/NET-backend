@@ -16,6 +16,7 @@ var email = Environment.GetEnvironmentVariable("Bootstrap__Email"); var password
 if (!string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(password) && !await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == email, ct))
 {
     if (password.Length < 12) throw new InvalidOperationException("Bootstrap password requires 12 characters");
+    if (password.Contains("CHANGE_ME", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Bootstrap password must be generated; the template placeholder is public");
     var user = new User { Email = email, PasswordHash = "", Role = admin, RoleId = admin.Id, CreatedAt = now, UpdatedAt = now }; user.PasswordHash = new PasswordService().Hash(user, password); db.Users.Add(user);
 }
 await db.SaveChangesAsync(ct); await db.CacheGenerations.Where(x => x.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(x => x.Version, x => x.Version + 1), ct);
