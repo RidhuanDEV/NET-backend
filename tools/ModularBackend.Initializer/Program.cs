@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 var noRestore = args.Contains("--no-restore"); var defaults = args.Contains("--yes");
 var paths = args.Where(a => !a.StartsWith("--", StringComparison.Ordinal)).ToArray();
@@ -47,6 +48,16 @@ await Run("pack", Path.Combine(source, "templates", "ModularBackend.Template.csp
 var package = Directory.EnumerateFiles(packageDirectory, "*.nupkg").Single();
 await Run("new", "install", package, "--force");
 await Run("new", "modular-net", "--name", name, "--output", target, "--port", port);
+using (var configuration = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(source, ".template.config", "template.json"))))
+{
+    var prefix = configuration.RootElement.GetProperty("sourceName").GetString() ?? throw new InvalidOperationException("Template identity missing");
+    foreach (var lockPath in Directory.EnumerateFiles(target, "packages.lock.json", SearchOption.AllDirectories))
+    {
+        var content = await File.ReadAllTextAsync(lockPath);
+        await File.WriteAllTextAsync(lockPath, content.Replace(prefix.ToLowerInvariant() + ".", name.ToLowerInvariant() + ".", StringComparison.Ordinal));
+    }
+}
+
 var dbPassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)); var jwt = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)); var bootstrap = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)); var s3Secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
 var env = await File.ReadAllTextAsync(Path.Combine(target, ".env.example"));
 env = env.Replace("CHANGE_ME_DATABASE_PASSWORD", dbPassword).Replace("CHANGE_ME_GENERATE_AT_LEAST_32_RANDOM_BYTES", jwt).Replace("CHANGE_ME_BOOTSTRAP_PASSWORD", bootstrap).Replace("CHANGE_ME_S3_ACCESS_KEY", "development").Replace("CHANGE_ME_S3_SECRET_KEY", s3Secret).Replace("Database=modular_net;", "Database=" + database + ";").Replace("POSTGRES_DB=modular_net", "POSTGRES_DB=" + database).Replace("Rate__Store=memory", "Rate__Store=" + (useRedis ? "redis" : "memory")).Replace("Cache__Enabled=false", "Cache__Enabled=" + useRedis.ToString().ToLowerInvariant()).Replace("Upload__Storage=local", "Upload__Storage=" + storage).Replace("Upload__Endpoint=http://127.0.0.1:19000", "Upload__Endpoint=" + endpoint).Replace("Upload__Bucket=uploads", "Upload__Bucket=" + bucket).Replace("COMPOSE_PROFILES=", "COMPOSE_PROFILES=" + string.Join(',', new[] { useRedis ? "redis" : "", storage == "s3" && endpoint == "http://127.0.0.1:19000" ? "s3" : "" }.Where(v => v.Length > 0)));
@@ -56,7 +67,7 @@ var deploymentName = name.ToLowerInvariant().Replace('.', '-');
 var composePath = Path.Combine(target, "compose.yaml");
 var compose = await File.ReadAllTextAsync(composePath);
 await File.WriteAllTextAsync(composePath, compose.Replace("name: modular-net", "name: " + deploymentName));
-env = env.Replace("Cache__Prefix=modular-net:v1", "Cache__Prefix=" + deploymentName + ":v1").Replace("Rate__Prefix=modular-net:v1", "Rate__Prefix=" + deploymentName + ":v1");
+env = env.Replace("COMPOSE_PROJECT_NAME=modular-net", "COMPOSE_PROJECT_NAME=" + deploymentName).Replace("Cache__Prefix=modular-net:v1", "Cache__Prefix=" + deploymentName + ":v1").Replace("Rate__Prefix=modular-net:v1", "Rate__Prefix=" + deploymentName + ":v1");
 await File.WriteAllTextAsync(Path.Combine(target, ".env"), env);
 if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(target, ".env"), UnixFileMode.UserRead | UnixFileMode.UserWrite);
 if (!noRestore) await Run("restore", Path.Combine(target, name + ".slnx"), "--locked-mode");

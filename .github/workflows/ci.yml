@@ -54,7 +54,7 @@ jobs:
           global-json-file: global.json
       - name: Start isolated S3 fixture
         run: |
-          docker run -d --name s3-fixture -p 19000:9090 -e COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=uploads adobe/s3mock:5.1.0
+          docker run -d --name s3-fixture -p 19000:9090 -e COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=uploads adobe/s3mock:5.2.2
           for attempt in $(seq 1 60); do if curl -fsS http://127.0.0.1:19000/favicon.ico; then exit 0; fi; sleep 1; done
           exit 1
       - run: dotnet restore --locked-mode
