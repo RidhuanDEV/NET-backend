@@ -7,6 +7,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        database: [postgresql, mysql]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -19,14 +20,27 @@ jobs:
       - run: dotnet test tests/ModularBackend.UnitTests -c Release --no-build
       - run: dotnet test tests/ModularBackend.ContractTests -c Release --no-build
       - run: dotnet list package --vulnerable --include-transitive
-      - run: pwsh -File scripts/verify-initializer.ps1
+      - run: pwsh -File scripts/verify-initializer.ps1 -Database ${{ matrix.database }}
       - uses: actions/upload-artifact@v4
         with:
-          name: openapi-${{ matrix.os }}
+          name: openapi-${{ matrix.os }}-${{ matrix.database }}
           path: artifacts/openapi
   runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [postgresql, mysql]
     runs-on: ubuntu-latest
     services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-fixture-password
+          MYSQL_DATABASE: modular_net
+        ports: [3306:3306]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 3s --health-timeout 3s --health-retries 30
       postgres:
         image: postgres:18.3-alpine
         env:
@@ -41,7 +55,8 @@ jobs:
         image: redis:8.6.1-alpine
         ports: [6379:6379]
     env:
-      Database__ConnectionString: Host=127.0.0.1;Database=modular_net;Username=modular_net;Password=ci-fixture-password
+      Database__Provider: ${{ matrix.database }}
+      Database__ConnectionString: ${{ matrix.database == 'mysql' && 'Server=127.0.0.1;Port=3306;Database=modular_net;User ID=root;Password=ci-fixture-password;SslMode=Preferred' || 'Host=127.0.0.1;Database=modular_net;Username=modular_net;Password=ci-fixture-password' }}
       Redis__ConnectionString: 127.0.0.1:6379
       Upload__Endpoint: http://127.0.0.1:19000
       Upload__Bucket: uploads
@@ -59,9 +74,9 @@ jobs:
           exit 1
       - run: dotnet restore --locked-mode
       - run: dotnet test tests/ModularBackend.IntegrationTests -c Release --no-restore --logger trx
-      - run: docker build -t modular-net-ci .
+      - run: docker build -t modular-net-${{ matrix.database }}:ci .
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: runtime-results
+          name: runtime-results-${{ matrix.database }}
           path: '**/TestResults/*.trx'

@@ -25,3 +25,7 @@ Framework ASP.NET Core supplies Controllers, routing, validation, configuration/
 Npgsql, AWS, Redis and OpenTelemetry are not Microsoft packages. StackExchange.Redis transitive publisher/license metadata should be checked with locked graph on updates. `dotnet list package --vulnerable --include-transitive` is the current NuGet advisory audit gate; it does not replace source/security review. No preview, floating production versions, MediatR, AutoMapper, FluentValidation, or generic repository framework.
 
 Build-time OpenAPI additionally installs Microsoft.Extensions.ApiDescription.Server 10.0.12 (Microsoft, MIT): [NuGet](https://www.nuget.org/packages/Microsoft.Extensions.ApiDescription.Server/10.0.12). Template packaging suppresses only NU5110/NU5111: content/scripts are copied source, deliberately not NuGet installation hooks. No runtime/compiler warning is suppressed.
+
+## MySQL provider
+
+Official Oracle/MySQL `MySql.EntityFrameworkCore` 10.0.9 with `MySql.Data` 26.7.0 supports EF Core 10. Installed nuspec license: `GPL-2.0-only WITH Universal-FOSS-exception-1.0`, acceptance required. Review these terms for your distribution. [Provider metadata](https://www.nuget.org/packages/MySql.EntityFrameworkCore/10.0.9). The provider has separate EF context/migrations; UUIDs use varchar(36), JSON uses MySQL JSON and UTC values use datetime(6). External databases should use `SslMode=VerifyFull` with a trusted CA. Local Compose uses `Preferred`; never use disabled certificate verification as a production fix.
