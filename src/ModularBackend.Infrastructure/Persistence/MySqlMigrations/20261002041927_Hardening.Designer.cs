@@ -2,68 +2,74 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ModularBackend.Infrastructure.Persistence;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ModularBackend.Infrastructure.Persistence.Migrations
+namespace ModularBackend.Infrastructure.Persistence.MySqlMigrations
 {
-    [DbContext(typeof(BackendDbContext))]
-    partial class BackendDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(MySqlBackendDbContext))]
+    [Migration("20261002041927_Hardening")]
+    partial class Hardening
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .UseCollation("utf8mb4_bin")
                 .HasAnnotation("ProductVersion", "10.0.12")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+                .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("ModularBackend.Domain.ActivityLog", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
                     b.Property<string>("ActorEmailSnapshot")
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
-                    b.Property<Guid?>("ActorIdSnapshot")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ActorIdSnapshot")
+                        .HasColumnType("varchar(36)");
 
                     b.Property<string>("After")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("json");
 
                     b.Property<string>("Before")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("json");
 
                     b.Property<string>("Behavior")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("EndpointId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
-                    b.Property<Guid?>("EntityId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("EntityId")
+                        .HasColumnType("varchar(36)");
 
                     b.Property<string>("Module")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
 
                     b.Property<string>("RequestId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserId")
+                        .HasColumnType("varchar(36)");
 
                     b.HasKey("Id");
 
@@ -82,50 +88,51 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.EmailJob", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
                     b.Property<int>("Attempts")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
-                    b.Property<DateTimeOffset>("AvailableAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("AvailableAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("varchar(4000)");
 
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<Guid?>("LeaseId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("LeaseId")
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset?>("LeaseUntil")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("NotificationId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("NotificationId")
+                        .IsRequired()
+                        .HasColumnType("varchar(36)");
 
                     b.Property<string>("Recipient")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
+                        .HasColumnType("varchar(16)");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
+                        .HasColumnType("varchar(160)");
 
                     b.HasKey("Id");
 
@@ -139,31 +146,32 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.Notification", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<Guid?>("ActorId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("ActorId")
+                        .HasColumnType("varchar(36)");
 
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("varchar(4000)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("EmailStatus")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
+                        .HasColumnType("varchar(16)");
 
-                    b.Property<DateTimeOffset?>("ReadAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("RecipientId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("RecipientId")
+                        .IsRequired()
+                        .HasColumnType("varchar(36)");
 
                     b.Property<long>("Sequence")
                         .HasColumnType("bigint");
@@ -171,7 +179,7 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
+                        .HasColumnType("varchar(160)");
 
                     b.HasKey("Id");
 
@@ -184,14 +192,14 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
                     b.ToTable("notifications", null, t =>
                         {
-                            t.HasCheckConstraint("CK_notifications_email_status", "\"EmailStatus\" IN ('NOT_REQUESTED','PENDING','SENT','FAILED')");
+                            t.HasCheckConstraint("CK_notifications_email_status", "`EmailStatus` IN ('NOT_REQUESTED','PENDING','SENT','FAILED')");
                         });
                 });
 
             modelBuilder.Entity("ModularBackend.Domain.NotificationCounter", b =>
                 {
-                    b.Property<Guid>("RecipientId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("RecipientId")
+                        .HasColumnType("varchar(36)");
 
                     b.Property<long>("Sequence")
                         .HasColumnType("bigint");
@@ -203,26 +211,24 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.Permission", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("varchar(128)");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("int unsigned");
 
                     b.HasKey("Id");
 
@@ -234,21 +240,22 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.RefreshFamily", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(36)");
 
                     b.HasKey("Id");
 
@@ -261,36 +268,38 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.RefreshToken", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset>("FamilyExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("FamilyExpiresAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<Guid>("FamilyId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("FamilyId")
+                        .IsRequired()
+                        .HasColumnType("varchar(36)");
 
                     b.Property<string>("ReplacedByTokenHash")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("varchar(64)");
 
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("varchar(64)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(36)");
 
                     b.HasKey("Id");
 
@@ -306,26 +315,24 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.Role", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("varchar(64)");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("int unsigned");
 
                     b.HasKey("Id");
 
@@ -337,11 +344,11 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.RolePermission", b =>
                 {
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("RoleId")
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<Guid>("PermissionId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("PermissionId")
+                        .HasColumnType("varchar(36)");
 
                     b.HasKey("RoleId", "PermissionId");
 
@@ -352,35 +359,36 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.StoredFile", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("MimeType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("longtext");
 
                     b.Property<string>("ObjectKey")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("OriginalName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Storage")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("longtext");
 
-                    b.Property<Guid?>("UploaderId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UploaderId")
+                        .HasColumnType("varchar(36)");
 
                     b.HasKey("Id");
 
@@ -396,35 +404,36 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ModularBackend.Domain.User", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasColumnType("varchar(36)");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<uint>("Version")
                         .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("int unsigned");
 
                     b.HasKey("Id");
 
@@ -440,9 +449,7 @@ namespace ModularBackend.Infrastructure.Persistence.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("int");
 
                     b.Property<long>("Version")
                         .HasColumnType("bigint");
