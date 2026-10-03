@@ -16,7 +16,8 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore --locked-mode
       - run: dotnet build -c Release --no-restore -warnaserror
-      - run: dotnet format --verify-no-changes --no-restore
+      - run: dotnet tool restore --tool-manifest dotnet-tools.json
+      - run: dotnet tool run csharpier check src tests tools
       - run: dotnet test tests/ModularBackend.UnitTests -c Release --no-build
       - run: dotnet test tests/ModularBackend.ContractTests -c Release --no-build
       - run: dotnet list package --vulnerable --include-transitive
