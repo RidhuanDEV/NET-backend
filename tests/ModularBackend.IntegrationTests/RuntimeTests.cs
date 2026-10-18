@@ -706,6 +706,91 @@ public sealed class RuntimeTests
     }
 
     [TestMethod]
+    public async Task EmailCaseVariantsAreOneAccount()
+    {
+        await Send(
+            HttpMethod.Post,
+            "/api/auth/register",
+            new { email = "  Mixed.Case@Example.Test ", password = "fixture-password" },
+            HttpStatusCode.Created
+        );
+        await Send(
+            HttpMethod.Post,
+            "/api/auth/register",
+            new { email = "mixed.case@example.test", password = "fixture-password" },
+            HttpStatusCode.Conflict
+        );
+        await Send(
+            HttpMethod.Post,
+            "/api/auth/login",
+            new { email = "MIXED.CASE@EXAMPLE.TEST", password = "fixture-password" },
+            HttpStatusCode.OK
+        );
+        await using var db = Db();
+        Assert.AreEqual(
+            1,
+            await db
+                .Users.IgnoreQueryFilters()
+                .CountAsync(u => u.Email == "mixed.case@example.test")
+        );
+    }
+
+    [TestMethod]
+    public async Task RefreshRotationNeverExtendsAbsoluteLifetime()
+    {
+        static string Hash(string raw) =>
+            Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(raw))
+            );
+        async Task<(RefreshToken Token, RefreshFamily Family)> Lifetimes(string raw)
+        {
+            await using var db = Db();
+            var hash = Hash(raw);
+            var token = await db.RefreshTokens.SingleAsync(t => t.TokenHash == hash);
+            var family = await db.RefreshFamilies.SingleAsync(f => f.Id == token.FamilyId);
+            return (token, family);
+        }
+        var login = await Send(
+            HttpMethod.Post,
+            "/api/auth/login",
+            new { email = "admin@example.test", password = "fixture-password" },
+            HttpStatusCode.OK
+        );
+        var first = login.GetProperty("data").GetProperty("refreshToken").GetString()!;
+        var issued = await Lifetimes(first);
+        Assert.IsTrue(
+            (issued.Family.ExpiresAt - issued.Token.CreatedAt - TimeSpan.FromDays(90)).Duration()
+                < TimeSpan.FromMinutes(1)
+        );
+        Assert.IsTrue(
+            (issued.Token.ExpiresAt - issued.Token.CreatedAt - TimeSpan.FromDays(30)).Duration()
+                < TimeSpan.FromMinutes(1)
+        );
+        var rotated = await Send(
+            HttpMethod.Post,
+            "/api/auth/refresh",
+            new { refreshToken = first },
+            HttpStatusCode.OK
+        );
+        var second = rotated.GetProperty("data").GetProperty("refreshToken").GetString()!;
+        var after = await Lifetimes(second);
+        Assert.AreEqual(issued.Family.ExpiresAt, after.Family.ExpiresAt);
+        Assert.AreEqual(issued.Family.ExpiresAt, after.Token.FamilyExpiresAt);
+        await using (var db = Db())
+        {
+            var family = await db.RefreshFamilies.SingleAsync(f => f.Id == after.Family.Id);
+            family.ExpiresAt = TimeProvider.System.GetUtcNow().AddSeconds(-1);
+            await db.SaveChangesAsync();
+        }
+        await Send(
+            HttpMethod.Post,
+            "/api/auth/refresh",
+            new { refreshToken = second },
+            HttpStatusCode.Unauthorized
+        );
+    }
+
+    [TestMethod]
     public async Task RequiredAuditFailureRollsBackAndOptionalFailureCommits()
     {
         await using var db = Db();

@@ -8,7 +8,7 @@
 | Microsoft.EntityFrameworkCore.Relational | 10.0.12 | Microsoft | MIT | [NuGet metadata](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.Relational/10.0.12) |
 | AWSSDK.S3 | 4.0.103.4 | AWS | Apache-2.0 | [NuGet metadata](https://www.nuget.org/packages/AWSSDK.S3/4.0.103.4) |
 | MailKit | 4.18.1 | Jeffrey Stedfast / .NET Foundation contributors | MIT | [NuGet metadata](https://www.nuget.org/packages/MailKit/4.18.1) |
-| System.Security.Cryptography.Pkcs | 10.0.13 (transitive pin) | Microsoft | MIT | [NuGet metadata](https://www.nuget.org/packages/System.Security.Cryptography.Pkcs/10.0.13) |
+| System.Security.Cryptography.Pkcs | 10.0.13 (pinned) | Microsoft | MIT | [NuGet metadata](https://www.nuget.org/packages/System.Security.Cryptography.Pkcs/10.0.13) |
 | MSTest | 4.0.2 | Microsoft | MIT | [NuGet metadata](https://www.nuget.org/packages/MSTest/4.0.2) |
 | Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.12 | Microsoft | MIT | [NuGet metadata](https://www.nuget.org/packages/Microsoft.AspNetCore.Authentication.JwtBearer/10.0.12) |
 | Microsoft.AspNetCore.Mvc.Testing | 10.0.12 | Microsoft | MIT | [NuGet metadata](https://www.nuget.org/packages/Microsoft.AspNetCore.Mvc.Testing/10.0.12) |
@@ -23,7 +23,7 @@
 
 Framework ASP.NET Core supplies Controllers, routing, validation, configuration/options, Identity password hashing, policy authorization, ILogger JSON, multipart and memory rate limiting. These require the Microsoft shared framework, not handwritten replacement libraries. EF Core/Npgsql own database access and migrations; Microsoft JwtBearer/IdentityModel own token handling. AWS SDK owns S3 requests/signing; StackExchange.Redis is the publisher-maintained client used by the Microsoft Redis package. Redis Lua is application atomic limiter policy, not a replacement Redis client. Microsoft OpenAPI supplies schema generation. MSTest/Mvc.Testing supply test runner and real host testing. Official OpenTelemetry supplies optional OTLP instrumentation/export.
 
-Npgsql, AWS, Redis and OpenTelemetry are not Microsoft packages. StackExchange.Redis transitive publisher/license metadata should be checked with locked graph on updates. `dotnet list package --vulnerable --include-transitive` is the current NuGet advisory audit gate; it does not replace source/security review. No preview, floating production versions, MediatR, AutoMapper, FluentValidation, or generic repository framework.
+Npgsql, AWS, Redis and OpenTelemetry are not Microsoft packages. StackExchange.Redis transitive publisher/license metadata should be checked with locked graph on updates. `System.Security.Cryptography.Pkcs` 10.0.13 (Microsoft, MIT) is pinned directly in Infrastructure because MimeKit 4.18.1 resolves the vulnerable 10.0.0 (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7); remove the pin once MimeKit depends on a patched release. `dotnet list package --vulnerable --include-transitive` is the current NuGet advisory audit gate; it does not replace source/security review. No preview, floating production versions, MediatR, AutoMapper, FluentValidation, or generic repository framework.
 
 Build-time OpenAPI additionally installs Microsoft.Extensions.ApiDescription.Server 10.0.12 (Microsoft, MIT): [NuGet](https://www.nuget.org/packages/Microsoft.Extensions.ApiDescription.Server/10.0.12). Template packaging suppresses only NU5110/NU5111: content/scripts are copied source, deliberately not NuGet installation hooks. No runtime/compiler warning is suppressed.
 

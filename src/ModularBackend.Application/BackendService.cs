@@ -11,7 +11,8 @@ public sealed class BackendService(
     ITokenService tokens,
     TimeProvider clock,
     IAuditFailureReporter auditFailures,
-    ICacheInvalidation invalidation
+    ICacheInvalidation invalidation,
+    RefreshSessionPolicy sessions
 )
 {
     private static UserResult Map(User u) =>
@@ -33,6 +34,9 @@ public sealed class BackendService(
         );
 
     private static AuthUserResult AuthMap(User u) => new(u.Id, u.Email, u.RoleId);
+
+    // Emails are case-insensitive identities; MySQL uses a binary collation, so normalize here.
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
     private static RoleResult Map(Role r, bool grants = true) =>
         new(
@@ -130,7 +134,7 @@ public sealed class BackendService(
             "REGISTER",
             async token =>
             {
-                if (await store.UserByEmailAsync(email, token) is not null)
+                if (await store.UserByEmailAsync(NormalizeEmail(email), token) is not null)
                     throw new ApiException(409, "Email already registered");
                 var role =
                     await store.RoleByNameAsync("user", token)
@@ -151,7 +155,7 @@ public sealed class BackendService(
     {
         var user = new User
         {
-            Email = email,
+            Email = NormalizeEmail(email),
             PasswordHash = "",
             RoleId = role.Id,
             Role = role,
@@ -190,8 +194,6 @@ public sealed class BackendService(
         "manage_uploads",
         "manage_notifications",
     ];
-    private const int SessionDays = 90;
-    private const int RefreshTokenDays = 30;
 
     // Names are compared exactly, so " admin " must not slip past the system-name rules.
     private static string NormalizeName(string name)
@@ -273,7 +275,7 @@ public sealed class BackendService(
     private AuthTokensResult IssuePair(User user, string refreshToken) =>
         new(tokens.Issue(user), refreshToken, "Bearer", 900);
 
-    // Idle timeout per token; the family expiry is an absolute cap that rotation never extends.
+    // Login passes no family expiry and starts the absolute lifetime; rotation reuses the family's.
     private (RefreshToken Entity, string Plaintext) CreateRefreshToken(
         Guid userId,
         Guid? familyId = null,
@@ -282,8 +284,8 @@ public sealed class BackendService(
     {
         var now = clock.GetUtcNow();
         var raw = NewRefreshToken();
-        var familyExpiry = familyExpiresAt ?? now.AddDays(SessionDays);
-        var tokenExpiry = now.AddDays(RefreshTokenDays);
+        var familyExpiry = familyExpiresAt ?? now.AddDays(sessions.AbsoluteDays);
+        var idleExpiry = now.AddDays(sessions.IdleDays);
         return (
             new RefreshToken
             {
@@ -291,7 +293,7 @@ public sealed class BackendService(
                 FamilyId = familyId ?? Guid.NewGuid(),
                 UserId = userId,
                 CreatedAt = now,
-                ExpiresAt = tokenExpiry < familyExpiry ? tokenExpiry : familyExpiry,
+                ExpiresAt = idleExpiry < familyExpiry ? idleExpiry : familyExpiry,
                 FamilyExpiresAt = familyExpiry,
             },
             raw
@@ -305,7 +307,7 @@ public sealed class BackendService(
         CancellationToken ct
     )
     {
-        var user = await store.UserByEmailAsync(email, ct);
+        var user = await store.UserByEmailAsync(NormalizeEmail(email), ct);
         // Always pay one hash verification, so neither unknown nor deleted accounts answer faster.
         var valid = false;
         if (user is null)
@@ -569,7 +571,7 @@ public sealed class BackendService(
                 await EnsureRoleWithinActorAsync(ctx, user.Role, token);
                 var before = JsonSerializer.Serialize(Map(user));
                 if (email is not null)
-                    user.Email = email;
+                    user.Email = NormalizeEmail(email);
                 if (roleId is not null && roleId.Value != user.RoleId)
                 {
                     var nextRole =
